@@ -16,6 +16,10 @@ sub check_light_sensor()
  ResetSensor(IN_4);
 }
 
+// Set the lightintensity that we get from Sensor(IN_3) into light_intensity_1 and from Sensor(IN_4) into
+// light_intensity_2. Rotate the robot (i forget left or right rotate) until two conditions met.
+// The first condition is the light_intensity_1 have the same value as light_intensity_2, that means the robot
+// faces right forward to the light source. The second condition is the value of lightintensity, in 
 sub search_for_light()
 {
  while(true)
