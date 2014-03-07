@@ -1,0 +1,115 @@
+#define LOWERLIGHT 15
+#define MOTOR_POWER 40
+#define ROTATE_SPEED 25
+#define DISTANCE 20
+
+int light_intensity_1;
+int light_intensity_2;
+
+sub check_light_sensor()
+{
+ SetSensorType(IN_3, IN_TYPE_LIGHT_INACTIVE);
+ SetSensorMode(IN_3, IN_MODE_PCTFULLSCALE);
+ ResetSensor(IN_3);
+ SetSensorType(IN_4, IN_TYPE_LIGHT_INACTIVE);
+ SetSensorMode(IN_4, IN_MODE_PCTFULLSCALE);
+ ResetSensor(IN_4);
+}
+
+sub search_for_light()
+{
+ while(true)
+ {
+  light_intensity_1 = Sensor(IN_3);
+  light_intensity_2 = Sensor(IN_4);
+  OnFwdSync(OUT_BC, ROTATE_SPEED, 100);
+  if ((light_intensity_1 == light_intensity_2) && (light_intensity_1 >= LOWERLIGHT))
+  {
+    PlayToneEx(200,500,0.5,FALSE);
+    break;
+  }
+ }
+}
+
+sub light_go_right()
+{
+  do
+  {
+   light_intensity_1 = Sensor(IN_3);
+   light_intensity_2 = Sensor(IN_4);
+   OnFwdSync(OUT_BC, ROTATE_SPEED, 100);
+   if ((light_intensity_1 == light_intensity_2) && (light_intensity_1 >= LOWERLIGHT))
+   {
+     break;
+   }
+  } while(true);
+}
+
+sub light_go_left()
+{
+  do
+  {
+    light_intensity_1 = Sensor(IN_3);
+    light_intensity_2 = Sensor(IN_4);
+    OnFwdSync(OUT_BC, ROTATE_SPEED, -100);
+    if ((light_intensity_1 == light_intensity_2) && (light_intensity_1 >= LOWERLIGHT))
+    {
+      break;
+    }
+  } while(true);
+}
+
+sub follow_light()
+{
+    do
+    {
+     check_light_sensor();
+     light_intensity_1 = Sensor(IN_3);
+     light_intensity_2 = Sensor(IN_4);
+     OnFwd(OUT_BC, MOTOR_POWER);
+     while (SensorUS(IN_2) < DISTANCE)
+     {
+      Off(OUT_BC);
+      check_light_sensor();
+      light_intensity_1 = Sensor(IN_3);
+      light_intensity_2 = Sensor(IN_4);
+      if ((light_intensity_1 < LOWERLIGHT) && (light_intensity_2 < LOWERLIGHT))
+      {
+        search_for_light();
+        break;
+      }
+      else if ((light_intensity_1 > (light_intensity_2 + 10)) || (light_intensity_1 < (light_intensity_2 - 10)))
+      {
+       break;
+      }
+     }
+     if (light_intensity_1 > (light_intensity_2 + 10))
+     {
+        light_go_right();
+     }
+     else if (light_intensity_1 < (light_intensity_2 - 10))
+     {
+      light_go_left();
+     }
+     else if ((light_intensity_1 < LOWERLIGHT) && (light_intensity_2 < LOWERLIGHT))
+     {
+      Off(OUT_BC);
+      PlayToneEx(200,200,1,FALSE);
+      break;
+     }
+    } while (true);
+}
+
+
+task main()
+{
+ do
+ {
+   SetSensorUltrasonic(IN_2);
+   Wait(1000);
+   check_light_sensor();
+   search_for_light();
+   follow_light();
+ } while(true);
+
+}                          
