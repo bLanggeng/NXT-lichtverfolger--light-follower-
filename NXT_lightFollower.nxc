@@ -2,10 +2,16 @@
 #define MOTOR_POWER 40
 #define ROTATE_SPEED 25
 #define DISTANCE 20
+#define TURN_THRESHOLD 10
 
 int light_intensity_1;
 int light_intensity_2;
 
+/*
+ Set the lightsensors we use to catch the lightintensity in environment. And also reset the sensors because this
+ function will be executed everytime the robot lose the light to follow and ready to find the light source
+ for next attempt.
+*/
 sub check_light_sensor()
 {
  SetSensorType(IN_3, IN_TYPE_LIGHT_INACTIVE);
@@ -16,10 +22,14 @@ sub check_light_sensor()
  ResetSensor(IN_4);
 }
 
-// Set the lightintensity that we get from Sensor(IN_3) into light_intensity_1 and from Sensor(IN_4) into
-// light_intensity_2. Rotate the robot (i forget left or right rotate) until two conditions met.
-// The first condition is the light_intensity_1 have the same value as light_intensity_2, that means the robot
-// faces right forward to the light source. The second condition is the value of lightintensity, in 
+/*
+ Set the lightintensity that we get from Sensor(IN_3) into light_intensity_1 and from Sensor(IN_4) into
+ light_intensity_2. Rotate the robot (i forget left or right rotate) with speed 25 until two conditions met.
+ The first condition is the light_intensity_1 have the same value as light_intensity_2, that means the robot
+ faces right forward to the light source. The second condition is the value of lightintensity equals or is greater than
+ LOWERLIGHT (Threshold between light intensity of the environment and the light source),
+ that means it is the light source.
+*/
 sub search_for_light()
 {
  while(true)
@@ -63,6 +73,11 @@ sub light_go_left()
   } while(true);
 }
 
+/*
+ This function is executed when the robot already get the light source.
+ Reset the sensors again. Assign the new value of light intensity into variables.
+ And then just go forward.
+*/
 sub follow_light()
 {
     do
@@ -71,27 +86,41 @@ sub follow_light()
      light_intensity_1 = Sensor(IN_3);
      light_intensity_2 = Sensor(IN_4);
      OnFwd(OUT_BC, MOTOR_POWER);
+     
+     // SensorUS(IN_2) is the ultrasonic sensor that we use as the eye of the robot.
+     // Everytime the value of SensorUS(IN_2) is lower than DISTANCE (20 mm), which means there is an obstacle
+     // in front of the robot, do the while loop.
      while (SensorUS(IN_2) < DISTANCE)
      {
-      Off(OUT_BC);
-      check_light_sensor();
-      light_intensity_1 = Sensor(IN_3);
+      Off(OUT_BC);                       // stop the robot.
+      check_light_sensor();               
+      light_intensity_1 = Sensor(IN_3);  // reset the light sensor and reassign the value of light_intensity variables.
       light_intensity_2 = Sensor(IN_4);
+      
+      // If the light_intensities is lower than LOWERLIGHT, call search_for_light function (the rotating move).
+      // The search_for_light function will be executed as long as there is no light source around the robot, that makes
+      // the search_for_light function break the while(true) loop.
       if ((light_intensity_1 < LOWERLIGHT) && (light_intensity_2 < LOWERLIGHT))
       {
         search_for_light();
         break;
       }
-      else if ((light_intensity_1 > (light_intensity_2 + 10)) || (light_intensity_1 < (light_intensity_2 - 10)))
+      
+      // This if means, there is an obstacle in front of the robot but the light source is still around the robot.
+      else if ((light_intensity_1 > (light_intensity_2 + TURN_THRESHOLD)) ||
+               (light_intensity_1 < (light_intensity_2 - TURN_THRESHOLD)))
       {
        break;
       }
      }
-     if (light_intensity_1 > (light_intensity_2 + 10))
+     
+     // These TURN_THRESHOLD things help us to decide whether the robot have to turn left or right
+     // in order to follow the light source.
+     if (light_intensity_1 > (light_intensity_2 + TURN_THRESHOLD))
      {
-        light_go_right();
+      light_go_right();
      }
-     else if (light_intensity_1 < (light_intensity_2 - 10))
+     else if (light_intensity_1 < (light_intensity_2 - TURN_THRESHOLD))
      {
       light_go_left();
      }
